@@ -3,9 +3,7 @@
   "version": "0.1.0",
   "description": "Demo of testing Swagger API with Gauge in JavaScript",
   "scripts": {
-    "setup": "cd server && npm install",
-    "start": "npm run setup && swagger project start server",
-    "test": "gauge specs/"
+    "test": "gauge.cmd run specs/"
   },
   "repository": {
     "type": "git",
@@ -13,7 +11,6 @@
   },
   "keywords": [
     "getgauge",
-    "swagger",
     "api",
     "testing",
     "demo"
@@ -25,6 +22,8 @@
   },
   "homepage": "https://github.com/getgauge/gauge-js-swagger-demo#readme",
   "dependencies": {
-    "request": "^2.72.0"
+    "superagent": "latest",
+    "http-status-codes": "latest",
+    "chai": "latest"
   }
 }

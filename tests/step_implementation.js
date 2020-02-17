@@ -1,96 +1,83 @@
 /* globals gauge*/
 
 "use strict";
+const superagent = require('superagent');
+var HttpStatus = require('http-status-codes');
+var expect = require("chai").expect;
 
-var request = require("request"),
-    assert = require("assert");
-
-var SERVER = process.env.API_BASE;
+var SERVER = "https://geo.api.gouv.fr";
 
 /**
- * Step implementation to send messages
+ * Step implementation to retrieve France regions
  */
-gauge.step("Send message <msg>", function(msg, done) {
-  // Send a HTTP request to the server
-  request({ method: "POST", baseUrl: SERVER, uri: "/messages",  json: { msg: msg } }, function (err, res, body) {
-    try {
-      // If request had error, throw it
-      if (err) {
-        throw err;
-      }
-      // If the response received was HTTP Status 200, then proceed
-      if (res.statusCode !== 200) {
-        throw new Error("HTTP Status " + res.statusCode + ". " + body);
-      }
+gauge.step("try to POST something", function( done) {
+//https://geo.api.gouv.fr/regions?nom=alpes&fields=nom,code
 
-      // Assert on the content body of the API response
-      assert.equal("Ok", body);
-      done();
-    } catch (err) {
-      done(err);
-    }
+  superagent
+  .post(SERVER+'/regions')
+  .set('X-API-Key', 'foobar')
+  .set('accept', 'json')
+  .end((err, res) => {
+    // Calling the end function will send the request
+    console.log("err", err);    
+    console.log(res.body);
+    
+    gauge.dataStore.specStore.put("response-body", res.body);
+    gauge.dataStore.specStore.put("http-status-code",res.status);
+    done();
   });
 });
 
+/**
+ * Step implementation to retrieve France regions
+ */
+gauge.step("POSTing should be NOT_FOUND", { continueOnFailure: true}, function() {
+  expect(getStatus()).eq(HttpStatus.NOT_FOUND);
+  
+  });
+  
+/**
+ * Step implementation to retrieve France regions
+ */
+gauge.step("POSTing should be FORBIDDEN", { continueOnFailure: true}, function() {
+  expect(getStatus()).eq(HttpStatus.FORBIDDEN);
+  
+  });
+  
 
 /**
- * Step implementation to retrieve messages
+ * Step implementation to retrieve France regions
  */
-gauge.step("Retrieve messages and validate <msgs>", function(msgs, done) {
-  var msglist = msgs.rows.map(function (row) {
-    return row.cells[0];
-  });
-  // Send a HTTP request to the server
-  request({ baseUrl: SERVER, uri: "/messages", json: true }, function (err, res, body) {
-    try {
-      // If request had error, throw it
-      if (err) {
-        throw err;
-      }
-      // If the response received was HTTP Status 200, then proceed
-      if (res.statusCode !== 200) {
-        throw new Error("HTTP Status " + res.statusCode + ". " + body);
-      }
+gauge.step("Get <namePart> regions", function(namePart, done) {
+  //https://geo.api.gouv.fr/regions?nom=alpes&fields=nom,code
+    gauge.message("No checking here" );
 
-      gauge.message("Response received: " + body);
-      assert.equal(msglist.length, body.length, "Match number of messages retrieved");
-
-      if (msglist) {
-        // Assert on the content body of the API response
-        body.forEach(function (item, i) {
-          var parsedmsg = JSON.parse(item).msg;
-          assert.equal(parsedmsg, msglist[i], "Match message " + parsedmsg);
-        });
-      }
+    superagent
+    .get(SERVER+'/regions')
+    .query({ nom: namePart, fields: 'nom,code' }) // query string
+    .set('X-API-Key', 'foobar')
+    .set('accept', 'json')
+    .end((err, res) => {
+      // Calling the end function will send the request
+      console.log("err", err);    
+      console.log(res.body);
+      
+      gauge.dataStore.specStore.put("response-body", res.body);
+      gauge.dataStore.specStore.put("http-status-code",res.status);
       done();
-    } catch (err) {
-      done(err);
-    }
+    });
   });
-});
+  
 
-
-/**
- * Step implementation to clear messages buffer
- */
-gauge.step("Clear messages", function(done) {
-  // Send a HTTP request to the server
-  request({ method: "DELETE", baseUrl: SERVER, uri: "/messages",  json: true }, function (err, res, body) {
-    try {
-      // If request had error, throw it
-      if (err) {
-        throw err;
-      }
-      // If the response received was HTTP Status 200, then proceed
-      if (res.statusCode !== 200) {
-        throw new Error("HTTP Status " + res.statusCode + ". " + body);
-      }
-
-      // Assert on the content body of the API response
-      assert.equal("Ok", body);
-      done();
-    } catch (err) {
-      done(err);
-    }
+gauge.step("Must contain <number> regions", function(number) {
+  expect(getResponseBody().length).to.be.eq(parseInt(number));
   });
-});
+
+
+function getStatus() {
+  return gauge.dataStore.specStore.get("http-status-code");
+}
+
+function getResponseBody() {
+  return gauge.dataStore.specStore.get("response-body");
+}
